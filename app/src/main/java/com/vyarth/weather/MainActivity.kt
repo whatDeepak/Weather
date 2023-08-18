@@ -15,6 +15,8 @@ import android.os.Bundle
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
+import android.widget.ImageView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -35,6 +37,9 @@ import retrofit.Callback
 import retrofit.GsonConverterFactory
 import retrofit.Response
 import retrofit.Retrofit
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.TimeZone
 
 class MainActivity : AppCompatActivity() {
 
@@ -60,6 +65,19 @@ class MainActivity : AppCompatActivity() {
 
         // Initialize the Fused location variable
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
+        // TODO (STEP 2: Initialize the SharedPreferences variable.)
+        // START
+        // Initialize the SharedPreferences variable
+        mSharedPreferences = getSharedPreferences(Constants.PREFERENCE_NAME, Context.MODE_PRIVATE)
+        // END
+
+        // TODO (STEP 7: Call the UI method to populate the data in
+        //  the UI which are already stored in sharedPreferences earlier.
+        //  At first run it will be blank.)
+        // START
+        setupUI()
+        // END
 
         if (!isLocationEnabled()) {
             Toast.makeText(
@@ -295,5 +313,97 @@ class MainActivity : AppCompatActivity() {
         if (mProgressDialog != null) {
             mProgressDialog!!.dismiss()
         }
+    }
+
+    /**
+     * Function is used to set the result in the UI elements.
+     */
+    private fun setupUI() {
+
+        // TODO (STEP 6: Here we get the stored response from
+        //  SharedPreferences and again convert back to data object
+        //  to populate the data in the UI.)
+        // START
+        // Here we have got the latest stored response from the SharedPreference and converted back to the data model object.
+        val weatherResponseJsonString =
+            mSharedPreferences.getString(Constants.WEATHER_RESPONSE_DATA, "")
+
+        if (!weatherResponseJsonString.isNullOrEmpty()) {
+
+            val weatherList =
+                Gson().fromJson(weatherResponseJsonString, WeatherResponse::class.java)
+
+            // For loop to get the required data. And all are populated in the UI.
+            for (z in weatherList.weather.indices) {
+                Log.i("NAMEEEEEEEE", weatherList.weather[z].main)
+
+                val tv_main =findViewById<TextView>(R.id.tv_main)
+                tv_main.text = weatherList.weather[z].main
+                val tv_main_description=findViewById<TextView>(R.id.tv_main_description)
+                tv_main_description.text = weatherList.weather[z].description
+                val tv_temp=findViewById<TextView>(R.id.tv_temp)
+                tv_temp.text = "${weatherList.main.temp}${getUnit(application.resources.configuration.locales.toString())}"
+
+                val tv_humidity=findViewById<TextView>(R.id.tv_humidity)
+                tv_humidity.text = weatherList.main.humidity.toString() + " per cent"
+                val tv_min=findViewById<TextView>(R.id.tv_min)
+                tv_min.text = "${weatherList.main.temp_min}${getUnit(application.resources.configuration.locales.toString())}"
+                val tv_max=findViewById<TextView>(R.id.tv_max)
+                tv_max.text = "${weatherList.main.temp_max}${getUnit(application.resources.configuration.locales.toString())}"
+                val tv_speed=findViewById<TextView>(R.id.tv_speed)
+                tv_speed.text = weatherList.wind.speed.toString()
+                val tv_name=findViewById<TextView>(R.id.tv_name)
+                tv_name.text = weatherList.name
+                val tv_country=findViewById<TextView>(R.id.tv_country)
+                tv_country.text = weatherList.sys.country
+                val tv_sunrise_time=findViewById<TextView>(R.id.tv_sunrise_time)
+                tv_sunrise_time.text = unixTime(weatherList.sys.sunrise.toLong())
+                val tv_sunset_time=findViewById<TextView>(R.id.tv_sunset_time)
+                tv_sunset_time.text = unixTime(weatherList.sys.sunset.toLong())
+
+                // Here we update the main icon
+                val iv_main=findViewById<ImageView>(R.id.iv_main)
+                when (weatherList.weather[z].icon) {
+                    "01d" -> iv_main.setImageResource(R.drawable.sunny)
+                    "02d" -> iv_main.setImageResource(R.drawable.cloud)
+                    "03d" -> iv_main.setImageResource(R.drawable.cloud)
+                    "04d" -> iv_main.setImageResource(R.drawable.cloud)
+                    "04n" -> iv_main.setImageResource(R.drawable.cloud)
+                    "10d" -> iv_main.setImageResource(R.drawable.rain)
+                    "11d" -> iv_main.setImageResource(R.drawable.storm)
+                    "13d" -> iv_main.setImageResource(R.drawable.snowflake)
+                    "01n" -> iv_main.setImageResource(R.drawable.cloud)
+                    "02n" -> iv_main.setImageResource(R.drawable.cloud)
+                    "03n" -> iv_main.setImageResource(R.drawable.cloud)
+                    "10n" -> iv_main.setImageResource(R.drawable.cloud)
+                    "11n" -> iv_main.setImageResource(R.drawable.rain)
+                    "13n" -> iv_main.setImageResource(R.drawable.snowflake)
+                }
+            }
+        }
+        // END
+    }
+
+    /**
+     * Function is used to get the temperature unit value.
+     */
+    private fun getUnit(value: String): String? {
+        Log.i("unitttttt", value)
+        var value = "°C"
+        if ("US" == value || "LR" == value || "MM" == value) {
+            value = "°F"
+        }
+        return value
+    }
+
+    /**
+     * The function is used to get the formatted time based on the Format and the LOCALE we pass to it.
+     */
+    private fun unixTime(timex: Long): String? {
+        val date = Date(timex * 1000L)
+        @SuppressLint("SimpleDateFormat") val sdf =
+            SimpleDateFormat("HH:mm:ss")
+        sdf.timeZone = TimeZone.getDefault()
+        return sdf.format(date)
     }
 }
