@@ -28,6 +28,8 @@ import com.karumi.dexter.MultiplePermissionsReport
 import com.karumi.dexter.PermissionToken
 import com.karumi.dexter.listener.PermissionRequest
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener
+import com.vyarth.weather.Models.WeatherResponse
+import com.vyarth.weather.network.WeatherService
 import retrofit.Call
 import retrofit.Callback
 import retrofit.GsonConverterFactory
@@ -177,13 +179,121 @@ class MainActivity : AppCompatActivity() {
 
         if (Constants.isNetworkAvailable(this@MainActivity)) {
 
+            /**
+             * Add the built-in converter factory first. This prevents overriding its
+             * behavior but also ensures correct behavior when using converters that consume all types.
+             */
+            val retrofit: Retrofit = Retrofit.Builder()
+                // API base URL.
+                .baseUrl(Constants.BASE_URL)
+                /** Add converter factory for serialization and deserialization of objects. */
+                /**
+                 * Create an instance using a default {@link Gson} instance for conversion. Encoding to JSON and
+                 * decoding from JSON (when no charset is specified by a header) will use UTF-8.
+                 */
+                .addConverterFactory(GsonConverterFactory.create())
+                /** Create the Retrofit instances. */
+                .build()
 
+            /**
+             * Here we map the service interface in which we declares the end point and the API type
+             *i.e GET, POST and so on along with the request parameter which are required.
+             */
+            val service: WeatherService =
+                retrofit.create<WeatherService>(WeatherService::class.java)
+
+            /** An invocation of a Retrofit method that sends a request to a web-server and returns a response.
+             * Here we pass the required param in the service
+             */
+            val listCall: Call<WeatherResponse> = service.getWeather(
+                mLatitude, mLongitude, Constants.METRIC_UNIT, Constants.APP_ID
+            )
+
+            showCustomProgressDialog() // Used to show the progress dialog
+
+            // Callback methods are executed using the Retrofit callback executor.
+            listCall.enqueue(object : Callback<WeatherResponse> {
+                @SuppressLint("SetTextI18n")
+                override fun onResponse(
+                    response: Response<WeatherResponse>,
+                    retrofit: Retrofit
+                ) {
+
+                    // Check weather the response is success or not.
+                    if (response.isSuccess) {
+
+                        hideProgressDialog() // Hides the progress dialog
+
+                        /** The de-serialized response body of a successful response. */
+                        val weatherList: WeatherResponse = response.body()
+                        Log.i("Response Result", "$weatherList")
+
+                        // TODO (STEP 4: Here we convert the response object to string and store the string in the SharedPreference.)
+                        // START
+                        // Here we have converted the model class in to Json String to store it in the SharedPreferences.
+                        val weatherResponseJsonString = Gson().toJson(weatherList)
+                        // Save the converted string to shared preferences
+                        val editor = mSharedPreferences.edit()
+                        editor.putString(Constants.WEATHER_RESPONSE_DATA, weatherResponseJsonString)
+                        editor.apply()
+                        // END
+
+                        // TODO (STEP 5: Remove the weather detail object as we will be getting
+                        //  the object in form of a string in the setup UI method.)
+                        // START
+                        setupUI()
+                        // END
+                    } else {
+                        // If the response is not success then we check the response code.
+                        val sc = response.code()
+                        when (sc) {
+                            400 -> {
+                                Log.e("Error 400", "Bad Request")
+                            }
+                            404 -> {
+                                Log.e("Error 404", "Not Found")
+                            }
+                            else -> {
+                                Log.e("Error", "Generic Error")
+                            }
+                        }
+                    }
+                }
+
+                override fun onFailure(t: Throwable) {
+                    hideProgressDialog() // Hides the progress dialog
+                    Log.e("Errorrrrr", t.message.toString())
+                }
+            })
         } else {
             Toast.makeText(
                 this@MainActivity,
                 "No internet connection available.",
                 Toast.LENGTH_SHORT
             ).show()
+        }
+    }
+
+    /**
+     * Method is used to show the Custom Progress Dialog.
+     */
+    private fun showCustomProgressDialog() {
+        mProgressDialog = Dialog(this)
+
+        /*Set the screen content from a layout resource.
+        The resource will be inflated, adding all top-level views to the screen.*/
+        mProgressDialog!!.setContentView(R.layout.dialog_custom_progress)
+
+        //Start the dialog and display it on screen.
+        mProgressDialog!!.show()
+    }
+
+    /**
+     * This function is used to dismiss the progress dialog if it is visible to user.
+     */
+    private fun hideProgressDialog() {
+        if (mProgressDialog != null) {
+            mProgressDialog!!.dismiss()
         }
     }
 }
