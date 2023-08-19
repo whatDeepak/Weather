@@ -15,6 +15,8 @@ import android.os.Bundle
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -53,6 +55,7 @@ class MainActivity : AppCompatActivity() {
     private var mLatitude: Double = 0.0
     // A global variable for Current Longitude
     private var mLongitude: Double = 0.0
+
 
     // TODO (STEP 1: Add a variable for SharedPreferences)
     // START
@@ -118,6 +121,22 @@ class MainActivity : AppCompatActivity() {
                     }
                 }).onSameThread()
                 .check()
+        }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        menuInflater.inflate(R.menu.menu_main, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_refresh -> {
+                getLocationWeatherDetails()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
         }
     }
 
